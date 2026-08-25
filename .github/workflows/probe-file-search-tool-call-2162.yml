@@ -1,0 +1,75 @@
+name: Probe file search tool call 2162
+
+on:
+  push:
+    branches:
+      - probe/typed-file-search-tool-call-2162
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: '0.12.5'
+          enable-cache: true
+      - run: uv sync --locked --all-extras
+      - name: Reproduce file-search callback snapshot type
+        run: |
+          uv run python - <<'PY'
+          from openai._models import construct_type_unchecked
+          from openai.lib.streaming._assistants import accumulate_run_step
+          from openai.types.beta import AssistantStreamEvent
+          from openai.types.beta.threads.runs import FileSearchToolCall
+
+          def event(value):
+              return construct_type_unchecked(type_=AssistantStreamEvent, value=value)
+
+          created = event({
+              "event": "thread.run.step.created",
+              "data": {
+                  "id": "step_123",
+                  "assistant_id": "asst_123",
+                  "created_at": 0,
+                  "object": "thread.run.step",
+                  "run_id": "run_123",
+                  "status": "in_progress",
+                  "step_details": {"type": "tool_calls", "tool_calls": []},
+                  "thread_id": "thread_123",
+                  "type": "tool_calls",
+              },
+          })
+          delta = event({
+              "event": "thread.run.step.delta",
+              "data": {
+                  "id": "step_123",
+                  "object": "thread.run.step.delta",
+                  "delta": {
+                      "step_details": {
+                          "type": "tool_calls",
+                          "tool_calls": [
+                              {
+                                  "index": 0,
+                                  "id": "call_123",
+                                  "type": "file_search",
+                                  "file_search": {},
+                              }
+                          ],
+                      }
+                  },
+              },
+          })
+
+          snapshots = {}
+          accumulate_run_step(event=created, run_step_snapshots=snapshots)
+          accumulate_run_step(event=delta, run_step_snapshots=snapshots)
+          snapshot = snapshots["step_123"]
+          assert snapshot.step_details.type == "tool_calls"
+          tool_call = snapshot.step_details.tool_calls[0]
+          print("tool_call_type=", type(tool_call))
+          assert isinstance(tool_call, FileSearchToolCall), type(tool_call)
+          PY
