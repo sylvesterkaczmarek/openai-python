@@ -331,6 +331,40 @@ class TestOpenAI:
                     print(frame)
             raise AssertionError()
 
+    def test_poll_helper_disables_cache(self, client: OpenAI) -> None:
+        request = client._build_request(
+            FinalRequestOptions(
+                method="get",
+                url="/foo",
+                headers={"X-Stainless-Poll-Helper": "true"},
+            )
+        )
+        assert request.headers["Cache-Control"] == "no-cache"
+
+        request = client._build_request(
+            FinalRequestOptions(
+                method="get",
+                url="/foo",
+                headers={
+                    "X-Stainless-Poll-Helper": "true",
+                    "Cache-Control": "max-age=60",
+                },
+            )
+        )
+        assert request.headers["Cache-Control"] == "max-age=60"
+
+        request = client._build_request(
+            FinalRequestOptions(
+                method="get",
+                url="/foo",
+                headers={
+                    "X-Stainless-Poll-Helper": "true",
+                    "Cache-Control": Omit(),
+                },
+            )
+        )
+        assert "Cache-Control" not in request.headers
+
     def test_request_timeout(self, client: OpenAI) -> None:
         request = client._build_request(FinalRequestOptions(method="get", url="/foo"))
         timeout = httpx2.Timeout(**request.extensions["timeout"])  # type: ignore

@@ -485,6 +485,12 @@ class BaseClient(Generic[_HttpxClientT, _DefaultStreamT]):
         # Don't set these headers if they were already set or removed by the caller. We check
         # `custom_headers`, which can contain `Omit()`, instead of `headers` to account for the removal case.
         lower_custom_headers = [header.lower() for header in custom_headers]
+        if (
+            headers.get("X-Stainless-Poll-Helper", "").lower() == "true"
+            and "cache-control" not in lower_custom_headers
+            and "cache-control" not in headers
+        ):
+            headers["Cache-Control"] = "no-cache"
         if "x-stainless-retry-count" not in lower_custom_headers:
             headers["x-stainless-retry-count"] = str(retries_taken)
         if "x-stainless-read-timeout" not in lower_custom_headers:
