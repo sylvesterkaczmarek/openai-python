@@ -1,5 +1,6 @@
 # File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
+from typing import Optional
 from typing_extensions import Literal
 
 from ..._models import BaseModel
@@ -16,8 +17,8 @@ class ResponseFunctionCallArgumentsDoneEvent(BaseModel):
     item_id: str
     """The ID of the item."""
 
-    name: str
-    """The name of the function that was called."""
+    name: Optional[str] = None
+    """The name of the function that was called, when provided."""
 
     output_index: int
     """The index of the output item."""
