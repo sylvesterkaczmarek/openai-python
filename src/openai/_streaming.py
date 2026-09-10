@@ -61,6 +61,9 @@ class Stream(Generic[_T]):
 
         try:
             for sse in iterator:
+                if not sse.data:
+                    continue
+
                 if sse.data.startswith("[DONE]"):
                     break
 
@@ -171,6 +174,9 @@ class AsyncStream(Generic[_T]):
 
         try:
             async for sse in iterator:
+                if not sse.data:
+                    continue
+
                 if sse.data.startswith("[DONE]"):
                     break
 
